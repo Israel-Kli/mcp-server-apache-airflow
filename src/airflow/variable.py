@@ -59,18 +59,22 @@ async def get_variable(key: str) -> List[Union[types.TextContent, types.ImageCon
 async def update_variable(
     key: str, value: Optional[str] = None, description: Optional[str] = None
 ) -> List[Union[types.TextContent, types.ImageContent, types.EmbeddedResource]]:
-    update_request = {}
-    if value is not None:
-        update_request["value"] = value
+    if value is None:
+        # The v1 schema requires value and PATCH replaces it, so keep the current one
+        # when only the description changes. update_mask cannot be used here: Airflow
+        # loads value under the "val" attribute and rejects mask entries for it.
+        value = variable_api.get_variable(variable_key=key).to_dict().get("value")
+
+    update_request = {"key": key, "value": value}
     if description is not None:
         update_request["description"] = description
 
-    response = variable_api.patch_variable(
-        variable_key=key, update_mask=list(update_request.keys()), variable=update_request
-    )
+    response = variable_api.patch_variable(variable_key=key, variable=update_request)
     return [types.TextContent(type="text", text=str(response.to_dict()))]
 
 
 async def delete_variable(key: str) -> List[Union[types.TextContent, types.ImageContent, types.EmbeddedResource]]:
     response = variable_api.delete_variable(variable_key=key)
-    return [types.TextContent(type="text", text=str(response.to_dict()))]
+    # a 204 response deserializes to None, so there is no body to dump
+    result = response.to_dict() if response else {"key": key, "deleted": True}
+    return [types.TextContent(type="text", text=str(result))]

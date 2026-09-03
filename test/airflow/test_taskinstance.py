@@ -210,13 +210,11 @@ class TestTaskInstanceModule:
         if state is not None:
             assert state in content.text
 
-        expected_mask = ["state"] if state is not None else []
-        expected_request = {"state": state} if state is not None else {}
+        expected_request = {"new_state": state} if state is not None else {}
         mock_patch.assert_called_once_with(
             dag_id=dag_id,
             dag_run_id=dag_run_id,
             task_id=task_id,
-            update_mask=expected_mask,
             update_task_instance=expected_request,
         )
 

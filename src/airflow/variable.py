@@ -1,3 +1,4 @@
+import json
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import mcp.types as types
@@ -6,6 +7,14 @@ from airflow_client.client.api.variable_api import VariableApi
 from src.airflow.airflow_client import api_client
 
 variable_api = VariableApi(api_client)
+
+# Airflow stores variable values as strings, but clients may deliver a JSON
+# document as a structured value; accept every JSON type and stringify below.
+JSONValue = Union[str, bool, int, float, List[Any], Dict[str, Any]]
+
+
+def as_string(value: JSONValue) -> str:
+    return value if isinstance(value, str) else json.dumps(value)
 
 
 def get_all_functions() -> list[tuple[Callable, str, str, bool]]:
@@ -38,11 +47,11 @@ async def list_variables(
 
 
 async def create_variable(
-    key: str, value: str, description: Optional[str] = None
+    key: str, value: JSONValue, description: Optional[str] = None
 ) -> List[Union[types.TextContent, types.ImageContent, types.EmbeddedResource]]:
     variable_request = {
         "key": key,
-        "value": value,
+        "value": as_string(value),
     }
     if description is not None:
         variable_request["description"] = description
@@ -57,7 +66,7 @@ async def get_variable(key: str) -> List[Union[types.TextContent, types.ImageCon
 
 
 async def update_variable(
-    key: str, value: Optional[str] = None, description: Optional[str] = None
+    key: str, value: Optional[JSONValue] = None, description: Optional[str] = None
 ) -> List[Union[types.TextContent, types.ImageContent, types.EmbeddedResource]]:
     if value is None:
         # The v1 schema requires value and PATCH replaces it, so keep the current one
@@ -65,7 +74,7 @@ async def update_variable(
         # loads value under the "val" attribute and rejects mask entries for it.
         value = variable_api.get_variable(variable_key=key).to_dict().get("value")
 
-    update_request = {"key": key, "value": value}
+    update_request = {"key": key, "value": as_string(value)}
     if description is not None:
         update_request["description"] = description
 

@@ -217,7 +217,7 @@ class TestTaskInstanceModule:
             dag_run_id=dag_run_id,
             task_id=task_id,
             update_mask=expected_mask,
-            task_instance_request=expected_request,
+            update_task_instance=expected_request,
         )
 
     @pytest.mark.asyncio

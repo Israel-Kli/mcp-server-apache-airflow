@@ -109,7 +109,7 @@ async def update_task_instance(
         dag_run_id=dag_run_id,
         task_id=task_id,
         update_mask=list(update_request.keys()),
-        task_instance_request=update_request,
+        update_task_instance=update_request,
     )
     return [types.TextContent(type="text", text=str(response.to_dict()))]
 
